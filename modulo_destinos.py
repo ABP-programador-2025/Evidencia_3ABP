@@ -8,7 +8,7 @@ def ver_destinos():
     if destinos:
         print("\nLista de destinos:")
         for destino in destinos:
-            print(f"ID: {destino[0]}, Ciudad: {destino[1]}, País: {destino[2]}, Costo base: ${destino[3]:.2f}")
+            print(f"ID: {destino[0]}, Ciudad: {destino[1]}, País: {destino[2]}, Costo base: ${destino[3]}")
     else:
         print("No hay destinos registrados aún.")
     cursor.close()
