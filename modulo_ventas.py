@@ -1,4 +1,5 @@
 from db_config import get_db_connection
+import datetime
 
 def ver_ventas():
     conn = get_db_connection()
@@ -38,11 +39,39 @@ def agregar_venta():
 
 def anular_venta():
     id_venta = input("Ingrese el ID de la venta a anular: ")
+    limite_tiempo = 60
+    unidad_tiempo = "dias"  # "dias" o "minutos"
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE ventas SET Estado='Anulada' WHERE ID_venta=%s", (id_venta,))
-    conn.commit()
-    print("Venta anulada correctamente.")
+    cursor.execute("SELECT Fecha_venta FROM ventas WHERE ID_venta=%s", (id_venta,))
+    resultado = cursor.fetchone()
+
+    if resultado:
+        fecha_venta = resultado[0]
+        ahora = datetime.datetime.now()
+
+        if unidad_tiempo == "dias":
+            diferencia = (ahora - fecha_venta).days
+        elif unidad_tiempo == "minutos":
+            diferencia = int((ahora - fecha_venta).total_seconds() / 60)
+        else:
+            print("Unidad de tiempo no soportada.")
+            cursor.close()
+            conn.close()
+            return
+
+        print(f"Han pasado {diferencia} {unidad_tiempo} desde la venta.")
+
+        if diferencia <= limite_tiempo:
+            cursor.execute("UPDATE ventas SET Estado='Anulada' WHERE ID_venta=%s", (id_venta,))
+            conn.commit()
+            print("Venta anulada correctamente.")
+        else:
+            print(f"No se puede anular la venta. Han pasado más de {limite_tiempo} {unidad_tiempo}.")
+    else:
+        print("Venta no encontrada.")
+
     cursor.close()
     conn.close()
 
