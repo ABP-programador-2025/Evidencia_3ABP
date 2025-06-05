@@ -1,11 +1,11 @@
 from db_config import get_db_connection
-import datetime
+from datetime import datetime
 
 def ver_ventas():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT v.ID_venta, c.Nombre_razonsocial, d.Ciudad, d.Pais, v.Fecha_venta, v.Estado, v.Costo_total
+        SELECT v.ID_venta, c.Nombre_razonsocial, d.Ciudad, d.Pais, v.Fecha_venta, v.Estado, v.Costo_total, v.Fecha_anulacion
         FROM ventas v
         JOIN clientes c ON v.ID_cliente = c.ID_cliente
         JOIN destinos d ON v.ID_destino = d.ID_destino
@@ -14,7 +14,15 @@ def ver_ventas():
     if ventas:
         print("\nLista de ventas:")
         for v in ventas:
-            print(f"ID: {v[0]}, Cliente: {v[1]}, Destino: {v[2]}, {v[3]}, Fecha: {v[4]}, Estado: {v[5]}, Total: ${v[6]:.2f}")
+            print(
+                f"ID: {v[0]}, "
+                f"Cliente: {v[1]}, "
+                f"Destino: {v[2]}, {v[3]}, "
+                f"Fecha: {v[4]}, "
+                f"Estado: {v[5]}, "
+                f"Total: ${v[6]}, "
+                f"Fecha de anulación: {v[7] if v[7] else 'N/A'}"
+            )
     else:
         print("No hay ventas registradas aún.")
     cursor.close()
@@ -24,7 +32,6 @@ def agregar_venta():
     id_cliente = input("Ingrese el ID del cliente: ")
     id_destino = input("Ingrese el ID del destino: ")
     costo_total = input("Ingrese el costo total: ")
-    from datetime import datetime
     fecha_venta = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -38,9 +45,11 @@ def agregar_venta():
     conn.close()
 
 def anular_venta():
-    id_venta = input("Ingrese el ID de la venta a anular: ")
     limite_tiempo = 60
     unidad_tiempo = "dias"  # "dias" o "minutos"
+    print(f"Para anular una venta, debe hacerlo dentro de {limite_tiempo} {unidad_tiempo} desde la fecha de venta. De lo contrario, no se podrá anular.")
+    id_venta = input("Ingrese el ID de la venta a anular: ")
+
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -49,7 +58,7 @@ def anular_venta():
 
     if resultado:
         fecha_venta = resultado[0]
-        ahora = datetime.datetime.now()
+        ahora = datetime.now()
 
         if unidad_tiempo == "dias":
             diferencia = (ahora - fecha_venta).days
@@ -64,7 +73,11 @@ def anular_venta():
         print(f"Han pasado {diferencia} {unidad_tiempo} desde la venta.")
 
         if diferencia <= limite_tiempo:
-            cursor.execute("UPDATE ventas SET Estado='Anulada' WHERE ID_venta=%s", (id_venta,))
+            fecha_anulacion = datetime.now()
+            cursor.execute(
+                "UPDATE ventas SET Estado='Anulada', Fecha_anulacion=%s WHERE ID_venta=%s",
+                (fecha_anulacion, id_venta)
+            )
             conn.commit()
             print("Venta anulada correctamente.")
         else:
@@ -109,7 +122,7 @@ def consultar_ventas_por_destino():
     if ventas:
         print("\nVentas para el destino:")
         for v in ventas:
-            print(f"ID: {v[0]}, Cliente: {v[1]}, Fecha: {v[2]}, Estado: {v[3]}, Total: ${v[4]:.2f}")
+            print(f"ID: {v[0]}, Cliente: {v[1]}, Fecha: {v[2]}, Estado: {v[3]}, Total: ${v[4]}")
     else:
         print("No hay ventas para este destino.")
     cursor.close()
@@ -119,7 +132,7 @@ def consultar_ventas_anuladas():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT v.ID_venta, c.Nombre_razonsocial, d.Ciudad, d.Pais, v.Fecha_venta, v.Costo_total
+        SELECT v.ID_venta, c.Nombre_razonsocial, d.Ciudad, d.Pais, v.Fecha_venta, v.Costo_total, v.Fecha_anulacion
         FROM ventas v
         JOIN clientes c ON v.ID_cliente = c.ID_cliente
         JOIN destinos d ON v.ID_destino = d.ID_destino
@@ -129,7 +142,7 @@ def consultar_ventas_anuladas():
     if ventas:
         print("\nVentas anuladas:")
         for v in ventas:
-            print(f"ID: {v[0]}, Cliente: {v[1]}, Destino: {v[2]}, {v[3]}, Fecha: {v[4]}, Total: ${v[5]:.2f}")
+            print(f"ID: {v[0]}, Cliente: {v[1]}, Destino: {v[2]}, {v[3]}, Fecha de venta: {v[4]}, Total: ${v[5]}, Fecha de anulación: {v[6]}")
     else:
         print("No hay ventas anuladas.")
     cursor.close()
@@ -144,6 +157,6 @@ def reporte_general_ventas():
     result = cursor.fetchone()
     print("\nReporte General de Ventas:")
     print(f"Total de ventas activas: {result[0]}")
-    print(f"Total recaudado: ${result[1] if result[1] else 0:.2f}")
+    print(f"Total recaudado: ${result[1]}")
     cursor.close()
     conn.close()
